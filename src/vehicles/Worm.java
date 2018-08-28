@@ -28,7 +28,7 @@ public class Worm extends Vehicle {
 		// Set friction (amount of momentum retained/frame approx)
 		fric = 0.3;
 		// Set max speed
-		setMaxSpeed(length * 50);
+		setMaxSpeed(length * 40);
 		// Set nudge speed per second
 		thetaNudge = 1;
 		thetaNudgeRange = Math.PI / 2;
@@ -116,6 +116,9 @@ public class Worm extends Vehicle {
 		segmentY[0] = y;
 		// Iteratively
 		for (int i = 1; i < segments; i++) {
+			// If aboveground, inch segment down
+			if (segmentY[i] < 0)
+				segmentY[i] += Game.delta * wormGrav / 2;
 			// Only move if stretched
 			double x1 = segmentX[i] - segmentX[i - 1];
 			double y1 = segmentY[i] - segmentY[i - 1];
