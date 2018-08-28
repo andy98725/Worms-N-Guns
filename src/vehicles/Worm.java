@@ -19,7 +19,7 @@ public class Worm extends Vehicle {
 	protected int groundState = GROUNDED;
 	// Segments stats
 	int segments;
-	double[] segmentX, segmentY;
+	double[] segmentX, segmentY, segmentYvel;
 	double[] segmentLength, segmentRad;
 
 	// Make new worm
@@ -36,17 +36,20 @@ public class Worm extends Vehicle {
 		segments = length;
 		segmentX = new double[segments];
 		segmentY = new double[segments];
+		segmentYvel = new double[segments];
 		segmentRad = new double[segments];
 		segmentLength = new double[segments];
 		// Calculate individual values
 		segmentX[0] = x;
 		segmentY[0] = y;
+		segmentYvel[0] = 0;
 		segmentRad[0] = 36;
 		segmentLength[0] = 32;
 		// Iterate
 		for (int i = 1; i < segments; i++) {
 			segmentX[i] = x;
 			segmentY[i] = y;
+			segmentYvel[i] = 0;
 			segmentRad[i] = 0.95 * segmentRad[i - 1];
 			segmentLength[i] = 0.95 * segmentLength[i - 1];
 		}
@@ -106,19 +109,25 @@ public class Worm extends Vehicle {
 			super.physics();
 		}
 		// Move segments
-		moveSegments();
+		physicsSegments();
 	}
 
 	// Move segments
-	protected void moveSegments() {
+	protected void physicsSegments() {
 		// Base case
 		segmentX[0] = x;
 		segmentY[0] = y;
 		// Iteratively
 		for (int i = 1; i < segments; i++) {
-			// If aboveground, inch segment down
-			if (segmentY[i] < 0)
-				segmentY[i] += Game.delta * wormGrav / 2;
+			// If aboveground, apply gravity
+			if (segmentY[i] < 0) {
+				segmentYvel[i] += Game.delta * wormGrav / 4;
+				segmentY[i] += Game.delta * segmentYvel[i];
+				segmentYvel[i] += Game.delta * wormGrav / 4;
+			} else {
+				// Reset gravity
+				segmentYvel[i] = 0;
+			}
 			// Only move if stretched
 			double x1 = segmentX[i] - segmentX[i - 1];
 			double y1 = segmentY[i] - segmentY[i - 1];
@@ -126,6 +135,8 @@ public class Worm extends Vehicle {
 			if (dist <= segmentLength[i]) {
 				continue;
 			}
+			// Reset gravity
+			segmentYvel[i] /= Math.pow(2, Game.delta);
 			// Confine to stretch
 			double mult = segmentLength[i - 1] / dist;
 			segmentX[i] = segmentX[i - 1] + x1 * mult;
