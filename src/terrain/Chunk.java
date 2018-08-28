@@ -9,7 +9,8 @@ import util.QuickMath;
 
 public class Chunk {
 	// Chunk pixel size
-	public static final int chunkSize = 512;
+	public static final int areaDist = 512;
+	public static final int chunkSize = 64;
 	// Internal chunk constants
 	protected static final int soilHeight = 10, soilMaxHeight = 30;
 
@@ -49,7 +50,7 @@ public class Chunk {
 			for (int j = 0; j < chunkSize; j++) {
 				int locY = (chunkSize * y + j);
 				// Calc threshold for height
-				double threshold = QuickMath.lerp(0.7, -0.7, locY / (10.0 * chunkSize));
+				double threshold = QuickMath.lerp(0.7, -0.7, locY / (10.0 * areaDist));
 				for (int i = 0; i < chunkSize; i++) {
 					int locX = (chunkSize * x + i);
 					// Do eval
@@ -63,7 +64,7 @@ public class Chunk {
 			for (int j = 0; j < chunkSize; j++) {
 				int locY = (chunkSize * y + j);
 				// Calc threshold for height
-				double threshold = QuickMath.lerp(0.825, 0.725, locY / (10.0 * chunkSize));
+				double threshold = QuickMath.lerp(0.825, 0.725, locY / (10.0 * areaDist));
 				for (int i = 0; i < chunkSize; i++) {
 					int locX = (chunkSize * x + i);
 					// Do eval
@@ -78,7 +79,7 @@ public class Chunk {
 			for (int j = 0; j < chunkSize; j++) {
 				int locY = (chunkSize * y + j);
 				// Calc threshold for height
-				double threshold = QuickMath.lerp(0.77, 0.67, locY / (10.0 * chunkSize));
+				double threshold = QuickMath.lerp(0.77, 0.67, locY / (10.0 * areaDist));
 				for (int i = 0; i < chunkSize; i++) {
 					int locX = (chunkSize * x + i);
 					// Do eval
@@ -115,7 +116,7 @@ public class Chunk {
 			for (int j = 0; j < chunkSize; j += 1) {
 				int locY = (chunkSize * y + j);
 				// Calc threshold for height
-				double threshold = QuickMath.lerp(1.0, -0.4, -locY / (3.0 * chunkSize));
+				double threshold = QuickMath.lerp(1.0, -0.4, -locY / (3.0 * areaDist));
 				for (int i = 0; i < chunkSize; i += 1) {
 					int locX = (chunkSize * x + i);
 					// Do eval
