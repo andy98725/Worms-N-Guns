@@ -98,11 +98,11 @@ public class Worm extends Vehicle {
 				// Slow down
 				xvel *= 0.8;
 				yvel *= 0.4;
-				useFriction = true;
-				useMaxSpeed = true;
 			}
 		} else {
 			// Regular physics
+			useFriction = true;
+			useMaxSpeed = true;
 			super.physics();
 		}
 		// Move segments
