@@ -1,21 +1,52 @@
 package vehicles;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Stroke;
 
 import ingame.Board;
+import main.Game;
 
 public class Worm extends Vehicle {
 
+	// Physics stats
 	double speedSec = 300;
-	double wormGrav = 700;
+	double wormGrav = 300;
+	double thetaNudge, thetaNudgeRange;
+	// Segments stats
+	int segments;
+	double[] segmentX, segmentY;
+	double[] segmentLength, segmentRad;
 
-	public Worm(Board parent, int HP, int armor, int x, int y, int length) {
+	// Make new worm
+	public Worm(Board parent, int HP, int armor, double x, double y, int length) {
 		super(parent, HP, armor, x, y);
 		// Set friction (amount of momentum retained/frame approx)
 		fric = 0.99;
 		// Set max speed
-		setMaxSpeed(300);
+		setMaxSpeed(350);
+		// Set nudge speed per second
+		thetaNudge = 1;
+		thetaNudgeRange = Math.PI / 2;
+		// Make segments data
+		segments = length;
+		segmentX = new double[segments];
+		segmentY = new double[segments];
+		segmentRad = new double[segments];
+		segmentLength = new double[segments];
+		// Calculate individual values
+		segmentX[0] = x;
+		segmentY[0] = y;
+		segmentRad[0] = 40;
+		segmentLength[0] = 36;
+		// Iterate
+		for (int i = 1; i < segments; i++) {
+			segmentX[i] = x;
+			segmentY[i] = y;
+			segmentRad[i] = 0.9 * segmentRad[i - 1];
+			segmentLength[i] = 0.9 * segmentLength[i - 1];
+		}
 	}
 
 	@Override
@@ -26,10 +57,27 @@ public class Worm extends Vehicle {
 
 	@Override
 	public void draw(Graphics2D g) {
-		// Temp test:
+		// Draw border
 		g.setColor(Color.DARK_GRAY);
-		g.fillOval((int) Math.round(x - 20), (int) Math.round(y - 20), 40, 40);
-
+		// Deeper stroke
+		Stroke oldStroke = g.getStroke();
+		g.setStroke(new BasicStroke(6.0f));
+		for (int i = 0; i < segments; i++) {
+			int xx = (int) Math.round(segmentX[i] - segmentRad[i]);
+			int yy = (int) Math.round(segmentY[i] - segmentRad[i]);
+			int rr = (int) Math.round(2 * segmentRad[i]);
+			g.drawOval(xx, yy, rr, rr);
+		}
+		// restore stroke
+		g.setStroke(oldStroke);
+		// Draw inside
+		g.setColor(Color.GRAY);
+		for (int i = 0; i < segments; i++) {
+			int xx = (int) Math.round(segmentX[i] - segmentRad[i]);
+			int yy = (int) Math.round(segmentY[i] - segmentRad[i]);
+			int rr = (int) Math.round(2 * segmentRad[i]);
+			g.fillOval(xx, yy, rr, rr);
+		}
 	}
 
 	// Physics
@@ -43,16 +91,39 @@ public class Worm extends Vehicle {
 			useMaxSpeed = false;
 			super.physics();
 			// Collided with earth?
-			if(y >= 0) {
+			if (y >= 0) {
 				// Slow down
-				xvel /= 2;
-				yvel /= 4;
+				xvel *= 0.8;
+				yvel *= 0.4;
 				useFriction = true;
 				useMaxSpeed = true;
 			}
 		} else {
 			// Regular physics
 			super.physics();
+		}
+		// Move segments
+		moveSegments();
+	}
+
+	// Move segments
+	protected void moveSegments() {
+		// Base case
+		segmentX[0] = x;
+		segmentY[0] = y;
+		// Iteratively
+		for (int i = 1; i < segments; i++) {
+			// Only move if stretched
+			double x1 = segmentX[i] - segmentX[i - 1];
+			double y1 = segmentY[i] - segmentY[i - 1];
+			double dist = Math.hypot(x1, y1);
+			if (dist <= segmentLength[i]) {
+				continue;
+			}
+			// Confine to stretch
+			double mult = segmentLength[i - 1] / dist;
+			segmentX[i] = segmentX[i - 1] + x1 * mult;
+			segmentY[i] = segmentY[i - 1] + y1 * mult;
 		}
 	}
 
@@ -62,7 +133,7 @@ public class Worm extends Vehicle {
 		// Cannot move when airborne
 		if (this.y < 0)
 			return;
-		// Calculate abs
+		// Limit to speedSec
 		if (xx != 0 || yy != 0) {
 			double mult = speedSec / Math.hypot(xx, yy);
 			xx *= mult;
@@ -71,6 +142,33 @@ public class Worm extends Vehicle {
 		// Set acceleration directly
 		xacc = xx;
 		yacc = yy;
+		// Exit if 0,0 on either
+		if ((xx == 0 && yy == 0) || (xvel == 0 && yvel == 0)) {
+			return;
+		}
+		// Nudge current momentum in angle
+		double theta = Math.atan2(yy, xx);
+		double curTheta = Math.atan2(yvel, xvel);
+		double diffTheta = theta - curTheta;
+		// Handle gaps
+		if (diffTheta >= 2 * Math.PI - thetaNudgeRange) {
+			diffTheta -= 2 * Math.PI;
+		}
+		if (diffTheta <= -2 * Math.PI + thetaNudgeRange) {
+			diffTheta += 2 * Math.PI;
+		}
+		// Check if in opposite hemisphere
+		if (Math.abs(diffTheta) > thetaNudgeRange) {
+			return;
+		}
+		// Multiply by nudge factor and delta
+		diffTheta *= Math.min(1, thetaNudge * Game.delta);
+		// Get new angle
+		curTheta += diffTheta;
+		// Nudge in direction
+		double hypot = Math.hypot(xvel, yvel);
+		xvel = hypot * Math.cos(curTheta);
+		yvel = hypot * Math.sin(curTheta);
 	}
 
 }

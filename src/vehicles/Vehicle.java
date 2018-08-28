@@ -18,11 +18,13 @@ public abstract class Vehicle {
 	// Max speed stats
 	private double maxSpeed, maxSpeedSq;
 	protected boolean useMaxSpeed = true;
+	protected boolean sprinting = false;
+	protected final double sprintMultiplier = 1.5;
 	// Health stats
 	protected int HP, mHP, armor;
 
 	// Create new vehicle
-	public Vehicle(Board parent, int HP, int armor, int x, int y) {
+	public Vehicle(Board parent, int HP, int armor, double x, double y) {
 		this.parent = parent;
 		this.mHP = HP;
 		this.HP = mHP;
@@ -44,16 +46,31 @@ public abstract class Vehicle {
 		maxSpeedSq = maxSpeed * maxSpeed;
 	}
 
+	protected double getMaxSpeed() {
+		return maxSpeed;
+	}
+
+	protected double getMaxSpeedSq() {
+		return maxSpeedSq;
+	}
+
+	// Set sprinting
+	public void setSprint(boolean s) {
+		sprinting = s;
+	}
+
 	// Do physics logic
 	protected void physics() {
 		// Do friction calculation
-		double f = Math.min(1, Math.pow(fric, Game.delta));
-		xvel *= f;
-		yvel *= f;
+		if (useFriction) {
+			double f = Math.min(1, Math.pow(fric, Game.delta));
+			xvel *= f;
+			yvel *= f;
+		}
 		// Do max speed check
 		double hsq = (xvel * xvel) + (yvel * yvel);
-		if (hsq > maxSpeedSq) {
-			double mult = maxSpeed / Math.sqrt(hsq);
+		if (useMaxSpeed && hsq > (sprinting ? maxSpeedSq * sprintMultiplier * sprintMultiplier : maxSpeedSq)) {
+			double mult = (sprinting ? maxSpeed * sprintMultiplier : maxSpeed) / Math.sqrt(hsq);
 			xvel *= mult;
 			yvel *= mult;
 		}

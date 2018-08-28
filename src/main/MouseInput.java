@@ -4,12 +4,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
-public class MouseInput implements MouseListener, MouseMotionListener{
+public class MouseInput implements MouseListener, MouseMotionListener {
+
+	// For some reason, it doesn't initialize at 0,0. Offsets are needed.
+	private static final int xoff = 0, yoff = -32;
 
 	@Override
 	public void mouseMoved(MouseEvent arg0) {
 		// Try use on game board
-		if(Game.board != null && Game.board.mouseMove(arg0.getX(), arg0.getY())) {
+		if (Game.board != null && Game.board.mouseMove(arg0.getX() + xoff, arg0.getY() + yoff)) {
 			return;
 		}
 	}
@@ -17,7 +20,7 @@ public class MouseInput implements MouseListener, MouseMotionListener{
 	@Override
 	public void mousePressed(MouseEvent arg0) {
 		// Try use on game board
-		if(Game.board != null && Game.board.mousePress()) {
+		if (Game.board != null && Game.board.mousePress()) {
 			return;
 		}
 	}
@@ -25,29 +28,29 @@ public class MouseInput implements MouseListener, MouseMotionListener{
 	@Override
 	public void mouseReleased(MouseEvent arg0) {
 		// Try use on game board
-		if(Game.board != null && Game.board.mouseRelease()) {
+		if (Game.board != null && Game.board.mouseRelease()) {
 			return;
 		}
 	}
 
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
-		//Unused
+		// Unused
 	}
 
 	@Override
 	public void mouseDragged(MouseEvent arg0) {
-		//Unused
+		// Unused
 	}
 
 	@Override
 	public void mouseEntered(MouseEvent arg0) {
-		//Unused
+		// Unused
 	}
 
 	@Override
 	public void mouseExited(MouseEvent arg0) {
-		//Unused
+		// Unused
 	}
 
 }

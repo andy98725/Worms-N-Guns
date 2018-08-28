@@ -27,7 +27,7 @@ public class Board {
 		// Make quick terrain
 		terrain = new Terrain();
 		// Make quick worm
-		playerVehicle = new Worm(this, 5, 0, 0, 10, 4);
+		playerVehicle = new Worm(this, 5, 0, 0, 10, 7);
 		// Make camera for vehicle
 		camera = new Camera(playerVehicle);
 	}
@@ -95,16 +95,20 @@ public class Board {
 				ymov++;
 			// Move vehicle
 			playerVehicle.accelerate(xmov, ymov);
+			return;
 		} else {
 			// Use mouse
 			int relX = mouseX - screenWid / 2;
 			int relY = mouseY - screenHei / 2;
 			// Check deadzone
 			if (relX * relX + relY * relY <= deadzoneSq) {
+				// Do no accel
+				playerVehicle.accelerate(0, 0);
 				return;
 			}
 			// Move vehicle
 			playerVehicle.accelerate(relX, relY);
+			return;
 		}
 	}
 
@@ -136,6 +140,17 @@ public class Board {
 				return true;
 			}
 		}
+		// Sprinting
+		switch(keycode) {
+		default:
+			break;
+		case KeyEvent.VK_SPACE:
+			if(playerVehicle != null) {
+				playerVehicle.setSprint(true);
+				return true;
+			}
+			break;
+		}
 		return false;
 	}
 
@@ -163,6 +178,17 @@ public class Board {
 				rightDown = false;
 				return true;
 			}
+		}
+		// Sprinting
+		switch(keycode) {
+		default:
+			break;
+		case KeyEvent.VK_SPACE:
+			if(playerVehicle != null) {
+				playerVehicle.setSprint(false);
+				return true;
+			}
+			break;
 		}
 
 		return false;

@@ -90,25 +90,14 @@ public class Texturepack {
 		return ret;
 	}
 
-	// Terrain colors: 
-	public Color getSkyColor() {
-		return new Color(120, 170, 255);
-	}
-	public Color getCloudColor() {
-		return new Color(200, 200, 220);
-	}
-
-	public Color getRegularDirtColor() {
-		return new Color(120, 80, 40);
-	}
-
-	public Color getDarkDirtColor() {
-		return new Color(100, 50, 0);
-	}
-
-	public Color getSoilColor() {
-		return new Color(200, 150, 100);
-	}
+	// Terrain colors:
+	public Color skyColor = new Color(120, 170, 255);
+	public Color cloudColor = new Color(200, 200, 220);
+	public Color soilColor = new Color(200, 150, 100);
+	public Color dirtColor = new Color(120, 80, 40);
+	public Color darkDirtColor = new Color(100, 50, 0);
+	public Color ironColor = new Color(160, 160, 170);
+	public Color goldColor = new Color(200, 180, 0);
 
 	public double getQuality() {
 		return graphicsQualityScale;

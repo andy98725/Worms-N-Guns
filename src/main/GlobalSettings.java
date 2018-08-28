@@ -15,7 +15,7 @@ public abstract class GlobalSettings {
 		// Is fullscreen?
 		setIsFullscreen(false);
 		// Set keyboard controls
-		setKeyboardControls(true);
+		setKeyboardControls(false);
 		
 	}
 	public static double getGraphicsQuality() {
