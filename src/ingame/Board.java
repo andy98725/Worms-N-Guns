@@ -28,7 +28,7 @@ public class Board {
 		// Make quick terrain
 		terrain = new Terrain();
 		// Make quick worm
-		playerVehicle = new Worm(this, 5, 0, 0, Chunk.chunkSize/2, 10);
+		playerVehicle = new Worm(this, 5, 0, 0, Chunk.chunkSize / 2, 10);
 		// Make camera for vehicle
 		camera = new Camera(playerVehicle);
 	}
@@ -99,14 +99,18 @@ public class Board {
 			return;
 		} else {
 			// Use mouse
-			int relX = mouseX - screenWid / 2;
-			int relY = mouseY - screenHei / 2;
+			double relX = mouseX - screenWid / 2;
+			double relY = mouseY - screenHei / 2;
+			double hypot = Math.hypot(relX, relY);
 			// Check deadzone
-			if (relX * relX + relY * relY <= deadzoneSq) {
+			if (hypot <= mouseDeadzone) {
 				// Do no accel
 				playerVehicle.accelerate(0, 0);
 				return;
 			}
+			// Multiply by speedzone
+			relX /= mouseFullzone;
+			relY /= mouseFullzone;
 			// Move vehicle
 			playerVehicle.accelerate(relX, relY);
 			return;
@@ -142,11 +146,11 @@ public class Board {
 			}
 		}
 		// Sprinting
-		switch(keycode) {
+		switch (keycode) {
 		default:
 			break;
 		case KeyEvent.VK_SPACE:
-			if(playerVehicle != null) {
+			if (playerVehicle != null) {
 				playerVehicle.setSprint(true);
 				return true;
 			}
@@ -181,11 +185,11 @@ public class Board {
 			}
 		}
 		// Sprinting
-		switch(keycode) {
+		switch (keycode) {
 		default:
 			break;
 		case KeyEvent.VK_SPACE:
-			if(playerVehicle != null) {
+			if (playerVehicle != null) {
 				playerVehicle.setSprint(false);
 				return true;
 			}
@@ -196,7 +200,8 @@ public class Board {
 	}
 
 	// Mouse move
-	protected int mouseMoveDeadZone = 32, deadzoneSq = mouseMoveDeadZone * mouseMoveDeadZone;
+	protected int mouseDeadzone = 32;
+	protected int mouseFullzone = 256;
 	protected int mouseX, mouseY;
 
 	public boolean mouseMove(int x, int y) {

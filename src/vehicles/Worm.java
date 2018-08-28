@@ -11,9 +11,12 @@ import main.Game;
 public class Worm extends Vehicle {
 
 	// Physics stats
-	double speedSec = 300;
-	double wormGrav = 300;
+	double speedSec = 1000;
+	double wormGrav = 500;
 	double thetaNudge, thetaNudgeRange;
+	// Grounded FSM
+	protected final static int GROUNDED = 0, AIRBORNE = 1;
+	protected int groundState = GROUNDED;
 	// Segments stats
 	int segments;
 	double[] segmentX, segmentY;
@@ -23,9 +26,9 @@ public class Worm extends Vehicle {
 	public Worm(Board parent, int HP, int armor, double x, double y, int length) {
 		super(parent, HP, armor, x, y);
 		// Set friction (amount of momentum retained/frame approx)
-		fric = 0.99;
+		fric = 0.3;
 		// Set max speed
-		setMaxSpeed(350);
+		setMaxSpeed(length * 50);
 		// Set nudge speed per second
 		thetaNudge = 1;
 		thetaNudgeRange = Math.PI / 2;
@@ -83,7 +86,7 @@ public class Worm extends Vehicle {
 	// Physics
 	@Override
 	protected void physics() {
-		if (y < 0) {
+		if (groundState == AIRBORNE) {
 			// Do gravity if airborne
 			xacc = 0;
 			yacc = wormGrav;
@@ -125,17 +128,26 @@ public class Worm extends Vehicle {
 			segmentX[i] = segmentX[i - 1] + x1 * mult;
 			segmentY[i] = segmentY[i - 1] + y1 * mult;
 		}
+		// check FSM as well
+		groundState = AIRBORNE;
+		for (int i = 0; i < segments; i++) {
+			if (segmentY[i] > 0) {
+				groundState = GROUNDED;
+				break;
+			}
+		}
 	}
 
 	// Accelerate vehicle
 	@Override
 	public void accelerate(double xx, double yy) {
 		// Cannot move when airborne
-		if (this.y < 0)
+		if (groundState == AIRBORNE) {
 			return;
+		}
 		// Limit to speedSec
 		if (xx != 0 || yy != 0) {
-			double mult = speedSec / Math.hypot(xx, yy);
+			double mult = speedSec / Math.max(1, Math.hypot(xx, yy));
 			xx *= mult;
 			yy *= mult;
 		}

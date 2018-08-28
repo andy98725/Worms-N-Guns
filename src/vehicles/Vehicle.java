@@ -67,6 +67,9 @@ public abstract class Vehicle {
 			xvel *= f;
 			yvel *= f;
 		}
+		// Do split order
+		xvel += xacc * Game.delta / 2;
+		yvel += yacc * Game.delta / 2;
 		// Do max speed check
 		double hsq = (xvel * xvel) + (yvel * yvel);
 		if (useMaxSpeed && hsq > (sprinting ? maxSpeedSq * sprintMultiplier * sprintMultiplier : maxSpeedSq)) {
@@ -74,9 +77,6 @@ public abstract class Vehicle {
 			xvel *= mult;
 			yvel *= mult;
 		}
-		// Do split order
-		xvel += xacc * Game.delta / 2;
-		yvel += yacc * Game.delta / 2;
 		x += xvel * Game.delta;
 		y += yvel * Game.delta;
 		xvel += xacc * Game.delta / 2;
