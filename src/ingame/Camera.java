@@ -2,7 +2,7 @@ package ingame;
 
 import java.awt.Graphics2D;
 
-import vehicles.Vehicle;
+import ingame.vehicles.Vehicle;
 
 public class Camera {
 	// Vehicle to track

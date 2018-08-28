@@ -1,4 +1,4 @@
-package terrain;
+package ingame.terrain;
 
 import java.awt.Graphics2D;
 
@@ -21,19 +21,23 @@ public class Terrain {
 		noise = new OpenSimplexNoise();
 	}
 
-	public void draw(Camera cam, Graphics2D g) {
+	public void draw(Graphics2D g, Camera cam, DrawContext context) {
 		// Get bounds
-		int minx = (int) Math.floor(((double) cam.getTLX()) / Chunk.chunkSize);
-		int miny = (int) Math.floor(((double) cam.getTLY()) / Chunk.chunkSize);
-		int maxx = (int) Math.ceil(((double) cam.getBRX()) / Chunk.chunkSize);
-		int maxy = (int) Math.ceil(((double) cam.getBRY()) / Chunk.chunkSize);
+		int minx = pixelToChunk(cam.getTLX());
+		int miny = pixelToChunk(cam.getTLY());
+		int maxx = pixelToChunk(cam.getBRX());
+		int maxy = pixelToChunk(cam.getBRY());
 		// Loop through and draw chunks
 		for (int i = minx; i <= maxx; i++) {
 			for (int j = miny; j <= maxy; j++) {
 				// Draw chunk
-				getChunk(i, j).draw(g);
+				getChunk(i, j).draw(g, context);
 			}
 		}
+	}
+
+	protected int pixelToChunk(double val) {
+		return (int) Math.floor(((double) val) / Chunk.chunkSize);
 	}
 
 	protected Chunk getChunk(int x, int y) {
@@ -45,5 +49,14 @@ public class Terrain {
 		ret = new Chunk(x, y, noise);
 		chunkmap.put(x, y, ret);
 		return ret;
+	}
+
+	public int getFloorHeight(int x) {
+		int cx = pixelToChunk(x);
+		return getChunk(cx, 0).getFloorHeight(x - cx * Chunk.chunkSize);
+	}
+
+	public int getFloorHeight(double x) {
+		return getFloorHeight((int) Math.round(x));
 	}
 }

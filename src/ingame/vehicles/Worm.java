@@ -1,4 +1,4 @@
-package vehicles;
+package ingame.vehicles;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -10,13 +10,8 @@ import main.Game;
 
 public class Worm extends Vehicle {
 
-	// Physics stats
-	double speedSec = 1000;
-	double wormGrav = 500;
+	// Movement stats
 	double thetaNudge, thetaNudgeRange;
-	// Grounded FSM
-	protected final static int GROUNDED = 0, AIRBORNE = 1;
-	protected int groundState = GROUNDED;
 	// Segments stats
 	int segments;
 	double[] segmentX, segmentY, segmentYvel;
@@ -27,8 +22,10 @@ public class Worm extends Vehicle {
 		super(parent, HP, armor, x, y);
 		// Set friction (amount of momentum retained/frame approx)
 		fric = 0.3;
-		// Set max speed
+		// Set physics data
 		setMaxSpeed(length * 30);
+		moveSpeed = 1000;
+		gravity = 500;
 		// Set nudge speed per second
 		thetaNudge = 1;
 		thetaNudgeRange = Math.PI / 2;
@@ -92,7 +89,7 @@ public class Worm extends Vehicle {
 		if (groundState == AIRBORNE) {
 			// Do gravity if airborne
 			xacc = 0;
-			yacc = wormGrav;
+			yacc = gravity;
 			useFriction = false;
 			useMaxSpeed = false;
 			super.physics();
@@ -120,10 +117,10 @@ public class Worm extends Vehicle {
 		// Iteratively
 		for (int i = 1; i < segments; i++) {
 			// If aboveground, apply gravity
-			if (segmentY[i] < 0) {
-				segmentYvel[i] += Game.delta * wormGrav / 4;
+			if (segmentY[i] < parent.getTerrain().getFloorHeight(segmentX[i])) {
+				segmentYvel[i] += Game.delta * gravity / 4;
 				segmentY[i] += Game.delta * segmentYvel[i];
-				segmentYvel[i] += Game.delta * wormGrav / 4;
+				segmentYvel[i] += Game.delta * gravity / 4;
 			} else {
 				// Reset gravity
 				segmentYvel[i] = 0;
@@ -145,7 +142,7 @@ public class Worm extends Vehicle {
 		// check FSM as well
 		groundState = AIRBORNE;
 		for (int i = 0; i < segments; i++) {
-			if (segmentY[i] > 0) {
+			if (segmentY[i] > parent.getTerrain().getFloorHeight(segmentX[i])) {
 				groundState = GROUNDED;
 				break;
 			}
@@ -161,7 +158,7 @@ public class Worm extends Vehicle {
 		}
 		// Limit to speedSec
 		if (xx != 0 || yy != 0) {
-			double mult = speedSec / Math.max(1, Math.hypot(xx, yy));
+			double mult = moveSpeed / Math.max(1, Math.hypot(xx, yy));
 			xx *= mult;
 			yy *= mult;
 		}

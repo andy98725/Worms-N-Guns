@@ -1,4 +1,4 @@
-package terrain;
+package ingame.terrain;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -19,6 +19,8 @@ public class Chunk {
 			CH_OIL = 6;
 	int[][] chunkData;
 	boolean[][] chunkDataLock;
+	// Floor height
+	int[] floorHeight;
 
 	// Array coordinates
 	protected int x, y;
@@ -143,12 +145,16 @@ public class Chunk {
 
 		// Soil line
 		if (y == 0) {
+			// Calculate floor heights
+			floorHeight = new int[chunkSize];
 			for (int i = 0; i < chunkSize; i++) {
 				// Calculate xpos used for noise
 				double noiseX = (chunkSize * x + i) / 200.0;
 				// Calculate y locs
 				int yy = (int) Math.round((soilMaxHeight + soilMaxHeight * noise.eval(0, noiseX)) / 2);
 				int topy = yy - soilHeight / 2, boty = yy + soilHeight / 2;
+				// Get floor height
+				floorHeight[i] = topy;
 				// Draw sky line to top
 				g.setColor(Game.textures.skyColor);
 				g.drawLine(i, 0, i, topy);
@@ -189,8 +195,17 @@ public class Chunk {
 	}
 
 	// Draw chunk
-	public void draw(Graphics2D g) {
+	public void draw(Graphics2D g, DrawContext context) {
 		// Draw image at position
 		g.drawImage(chunkDisp, x * chunkSize, y * chunkSize, null);
+	}
+
+	// Get floor height
+	public int getFloorHeight(int x) {
+		// Bad case
+		if (y != 0)
+			return 0;
+		// Return array val
+		return floorHeight[x];
 	}
 }

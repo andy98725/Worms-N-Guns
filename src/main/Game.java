@@ -13,7 +13,7 @@ public class Game extends JPanel {
 	public static boolean running;
 	// Timing variables
 	public static final double frameRate = 60;
-	public static double delta;
+	public static double delta, time;
 	public static int frame;
 	// Graphics variables
 	public static Texturepack textures;
@@ -33,7 +33,7 @@ public class Game extends JPanel {
 		setDoubleBuffered(true);
 		// Initialize default globals
 		GlobalSettings.initDefaults();
-		
+
 		// Temp make new board
 		board = new Board();
 	}

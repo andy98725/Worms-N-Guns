@@ -1,8 +1,10 @@
-package main;
+package util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+
+import main.Game;
 
 public class Debug {
 	protected static PrintWriter debugger;

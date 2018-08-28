@@ -5,11 +5,13 @@ import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 
+import ingame.terrain.Chunk;
+import ingame.terrain.DrawContext;
+import ingame.terrain.Terrain;
+import ingame.vehicles.Tank;
+import ingame.vehicles.Vehicle;
+import ingame.vehicles.Worm;
 import main.GlobalSettings;
-import terrain.Chunk;
-import terrain.Terrain;
-import vehicles.Vehicle;
-import vehicles.Worm;
 
 public class Board {
 
@@ -21,6 +23,7 @@ public class Board {
 	protected ArrayList<Vehicle> vehicles = new ArrayList<Vehicle>();
 	// Display variables
 	protected Camera camera;
+	DrawContext context;
 	protected int screenWid, screenHei;
 
 	// Temporary/Quick startup
@@ -28,9 +31,19 @@ public class Board {
 		// Make quick terrain
 		terrain = new Terrain();
 		// Make quick worm
-		playerVehicle = new Worm(this, 5, 0, 0, Chunk.chunkSize / 2, 10);
+//		quickWorm();
+//		// Make quick tank
+		quickTank();
 		// Make camera for vehicle
 		camera = new Camera(playerVehicle);
+	}
+	protected void quickWorm() {
+		playerVehicle = new Worm(this, 5, 0, 0, Chunk.chunkSize / 2, 10);
+		context = DrawContext.WORM;
+	}
+	protected void quickTank() {
+		playerVehicle = new Tank(this, 5, 0, 0, 0, 60, 30);
+		context = DrawContext.TANK;
 	}
 
 	// Calculations
@@ -52,7 +65,7 @@ public class Board {
 			camera.applyTranslation(g);
 		}
 		// Draw background
-		terrain.draw(camera, g);
+		terrain.draw(g, camera, context);
 		// Draw vehicles
 		for (Vehicle v : vehicles) {
 			v.draw(g);
@@ -66,6 +79,11 @@ public class Board {
 		if (camera != null) {
 			camera.setDimensions(wid, hei);
 		}
+	}
+
+	// Get terrain
+	public Terrain getTerrain() {
+		return terrain;
 	}
 
 	// Add vehicle to array

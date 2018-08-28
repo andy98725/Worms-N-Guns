@@ -1,4 +1,4 @@
-package vehicles;
+package ingame.vehicles;
 
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
@@ -13,15 +13,21 @@ public abstract class Vehicle {
 	// Position stats
 	protected double x, y, xvel, yvel, xacc, yacc;
 	// Friction stats
-	protected double fric;
+	protected double fric = 1;
 	protected boolean useFriction = true;
 	// Max speed stats
 	private double maxSpeed, maxSpeedSq;
 	protected boolean useMaxSpeed = true;
 	protected boolean sprinting = false;
 	protected final double sprintMultiplier = 2.0;
+	// Movement
+	double moveSpeed;
+	double gravity = 500;
 	// Health stats
 	protected int HP, mHP, armor;
+	// Grounded FSM
+	protected final static int GROUNDED = 0, AIRBORNE = 1;
+	protected int groundState = GROUNDED;
 
 	// Create new vehicle
 	public Vehicle(Board parent, int HP, int armor, double x, double y) {

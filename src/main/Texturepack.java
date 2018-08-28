@@ -12,6 +12,8 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import util.Debug;
+
 public class Texturepack {
 	protected String source;
 	Map<String, BufferedImage> imgCache;

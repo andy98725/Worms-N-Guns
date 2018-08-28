@@ -7,6 +7,8 @@ import java.awt.Toolkit;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import util.Debug;
+
 public class WormsNGuns extends JPanel implements Runnable {
 	private static final long serialVersionUID = 1L;
 	// Container
@@ -107,9 +109,11 @@ public class WormsNGuns extends JPanel implements Runnable {
 	public void run() {
 		// Declare timing variables
 		long prevFrame = System.nanoTime(), sleep = 0;
+		Game.time = 0;
 		while (Game.running && !Thread.currentThread().isInterrupted()) {
 			// Nanoseconds to seconds
 			Game.delta = (System.nanoTime() - prevFrame) / 1000000000.0;
+			Game.time += Game.delta;
 			// Update frame timing
 			prevFrame = System.nanoTime();
 			Game.frame++;
