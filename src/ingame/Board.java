@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 
 import main.GlobalSettings;
+import terrain.Chunk;
 import terrain.Terrain;
 import vehicles.Vehicle;
 import vehicles.Worm;
@@ -27,7 +28,7 @@ public class Board {
 		// Make quick terrain
 		terrain = new Terrain();
 		// Make quick worm
-		playerVehicle = new Worm(this, 5, 0, 0, 10, 7);
+		playerVehicle = new Worm(this, 5, 0, 0, Chunk.chunkSize/2, 10);
 		// Make camera for vehicle
 		camera = new Camera(playerVehicle);
 	}

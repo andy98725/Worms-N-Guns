@@ -38,14 +38,14 @@ public class Worm extends Vehicle {
 		// Calculate individual values
 		segmentX[0] = x;
 		segmentY[0] = y;
-		segmentRad[0] = 40;
-		segmentLength[0] = 36;
+		segmentRad[0] = 36;
+		segmentLength[0] = 32;
 		// Iterate
 		for (int i = 1; i < segments; i++) {
 			segmentX[i] = x;
 			segmentY[i] = y;
-			segmentRad[i] = 0.9 * segmentRad[i - 1];
-			segmentLength[i] = 0.9 * segmentLength[i - 1];
+			segmentRad[i] = 0.95 * segmentRad[i - 1];
+			segmentLength[i] = 0.95 * segmentLength[i - 1];
 		}
 	}
 
