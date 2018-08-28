@@ -28,7 +28,7 @@ public class Worm extends Vehicle {
 		// Set friction (amount of momentum retained/frame approx)
 		fric = 0.3;
 		// Set max speed
-		setMaxSpeed(length * 40);
+		setMaxSpeed(length * 30);
 		// Set nudge speed per second
 		thetaNudge = 1;
 		thetaNudgeRange = Math.PI / 2;

@@ -19,7 +19,7 @@ public abstract class Vehicle {
 	private double maxSpeed, maxSpeedSq;
 	protected boolean useMaxSpeed = true;
 	protected boolean sprinting = false;
-	protected final double sprintMultiplier = 1.5;
+	protected final double sprintMultiplier = 2.0;
 	// Health stats
 	protected int HP, mHP, armor;
 
