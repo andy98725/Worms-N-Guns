@@ -1,0 +1,2 @@
+// This is a file for graphics settings.
+// This is currently unused, but may be of help later.
