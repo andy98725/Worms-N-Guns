@@ -1,6 +1,7 @@
 package ingame.terrain;
 
 import java.awt.Graphics2D;
+import java.util.Random;
 
 import ingame.Camera;
 import util.BiHashMap;
@@ -17,8 +18,10 @@ public class Terrain {
 		// Declare chunkmap
 		chunkmap = new BiHashMap<Integer, Integer, Chunk>();
 		// Noise
-		// for testing, use no seed
-		noise = new OpenSimplexNoise();
+//		// for testing, use no seed
+//		noise = new OpenSimplexNoise();
+		// Use random seed
+		noise = new OpenSimplexNoise(new Random().nextLong());
 	}
 
 	public void draw(Graphics2D g, Camera cam, DrawContext context) {
