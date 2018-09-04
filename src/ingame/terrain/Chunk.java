@@ -10,9 +10,9 @@ import util.QuickMath;
 public class Chunk {
 	// Chunk pixel size
 	public static final int areaDist = 512;
-	public static final int chunkSize = 64;
+	public static final int chunkSize = 256;
 	// Internal chunk constants
-	protected static final int soilHeight = 10, soilMaxHeight = 30;
+	protected static final int soilHeight = 10, soilMaxHeight = 90;
 
 	// Data types
 	protected static final int CH_REGULAR = 0, CH_DARK = 1, CH_CLOUD = 2, CH_SKY = 3, CH_IRON = 4, CH_GOLD = 5,

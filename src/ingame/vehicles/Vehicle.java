@@ -1,10 +1,14 @@
 package ingame.vehicles;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.RectangularShape;
 import java.awt.image.BufferedImage;
 
 import ingame.Board;
@@ -17,6 +21,7 @@ public abstract class Vehicle {
 	protected Board parent;
 	// Position stats
 	protected double x, y, xvel, yvel, xacc, yacc;
+	protected RectangularShape[] segmentShape;
 	// Hitbox bounds
 	protected Rectangle2D bounds;
 	// Friction stats
@@ -29,12 +34,15 @@ public abstract class Vehicle {
 	protected final double sprintMultiplier = 2.0;
 	// Movement
 	double moveSpeed, moveSpeedXMultiplier = 1, moveSpeedYMultiplier = 1;
-	double gravity = 500;
+	double[] gravity = { 0, 250, 500 };
+	protected boolean useGravity = true;
 	// Health stats
 	protected int HP, mHP, armor;
 	// Health display stats
 	private double healthTimer = 0;
 	private BufferedImage healthBar;
+	// Draw stats
+	protected Color basicFill, basicOutline;
 	// Grounded FSM
 	protected final static int UNDERGROUND = 0, GROUNDED = 1, AIRBORNE = 2;
 	protected int groundState = GROUNDED;
@@ -61,6 +69,10 @@ public abstract class Vehicle {
 	// General logic
 	public void logic() {
 		physics();
+		// Update segents
+		updateSegments();
+		// Update FSM
+		updateFSM();
 		// Update bounds
 		updateBounds();
 	}
@@ -76,6 +88,10 @@ public abstract class Vehicle {
 		// Do split order
 		xvel += xacc * Game.delta / 2;
 		yvel += yacc * Game.delta / 2;
+		// Gravity as well
+		if (useGravity) {
+			yvel += gravity[groundState] * Game.delta / 2;
+		}
 		// Do max speed check
 		double hsq = (xvel * xvel) + (yvel * yvel);
 		if (useMaxSpeed && hsq > (sprinting ? maxSpeedSq * sprintMultiplier * sprintMultiplier : maxSpeedSq)) {
@@ -87,9 +103,54 @@ public abstract class Vehicle {
 		y += yvel * Game.delta;
 		xvel += xacc * Game.delta / 2;
 		yvel += yacc * Game.delta / 2;
+		if (useGravity) {
+			yvel += gravity[groundState] * Game.delta / 2;
+		}
 	}
 
-	protected abstract void updateBounds();
+	protected abstract void updateSegments();
+
+	// Update FSM
+	protected void updateFSM() {
+		// Check head at center
+		int groundLevel = parent.getTerrain().getFloorHeight(segmentShape[0].getCenterX());
+		// Is head grounded?
+		if (segmentShape[0].getMaxY() >= groundLevel) {
+			setFSMState(UNDERGROUND);
+			return;
+		}
+		// Head is above ground. Check body.
+		// Check if any segments are grounded
+		for (int i = 1; i < segmentShape.length; i++) {
+			// Get relevant segment
+			RectangularShape seg = segmentShape[i];
+			// Check grounded
+			if (seg.getMaxY() >= parent.getTerrain().getFloorHeight(seg.getCenterX())) {
+				setFSMState(GROUNDED);
+				return;
+			}
+		}
+		// None of body was grounded. Set to airborne.
+		setFSMState(AIRBORNE);
+		return;
+	}
+
+	protected abstract void setFSMState(int state);
+
+	protected void updateBounds() {
+		// Define bounds check
+		double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+		for (int i = 0; i < segmentShape.length; i++) {
+			// check each segment with rad
+			RectangularShape seg = segmentShape[i];
+			minX = Math.min(minX, seg.getMinX());
+			maxX = Math.max(maxX, seg.getMaxX());
+			minY = Math.min(minY, seg.getMinY());
+			maxY = Math.max(maxY, seg.getMaxY());
+		}
+		// Set bounds
+		bounds.setFrame(minX, minY, maxX - minX, maxY - minY);
+	}
 
 	// Damage vehicle
 	public void damage(int dam) {
@@ -107,10 +168,32 @@ public abstract class Vehicle {
 		}
 	}
 
-	// Draw the vehicle
-	public abstract void draw(Graphics2D g);
+	// Basic draw
+	public void draw(Graphics2D g) {
+		// Draw inside
+		g.setColor(basicFill);
+		for (int i = 0; i < segmentShape.length; i++) {
+			g.fill(segmentShape[i]);
+		}
+	}
 
-	public abstract void drawOutline(Graphics2D g, Color c);
+	// Outline strke
+	private static final Stroke basic = new BasicStroke(6.0f);
+	// Basic outline
+
+	public void drawOutline(Graphics2D g, Color c) {
+		// Draw border
+		g.setColor(basicOutline);
+		// Deeper stroke
+		Stroke oldStroke = g.getStroke();
+		g.setStroke(basic);
+		for (int i = 0; i < segmentShape.length; i++) {
+			g.draw(segmentShape[i]);
+		}
+		// restore
+		g.setStroke(oldStroke);
+
+	}
 
 	// Draw health potentially
 	public void drawGUI(Graphics2D g) {
@@ -173,6 +256,26 @@ public abstract class Vehicle {
 		return isHostile;
 	}
 
+	// Get segment angles
+	protected double[] getSegmentAngles() {
+		// Declare
+		double[] ret = new double[segmentShape.length];
+		int endCase = ret.length - 1;
+		// Base case
+		ret[0] = Math.atan2(segmentShape[0].getCenterY() - segmentShape[1].getCenterY(),
+				segmentShape[0].getCenterX() - segmentShape[1].getCenterX());
+		// Middle cases
+		for (int i = 1; i < endCase; i++) {
+			ret[i] = Math.atan2(segmentShape[i - 1].getCenterY() - segmentShape[i + 1].getCenterY(),
+					segmentShape[i - 1].getCenterX() - segmentShape[i + 1].getCenterX());
+		}
+		// End case
+		ret[endCase] = Math.atan2(segmentShape[endCase - 1].getCenterY() - segmentShape[endCase].getCenterY(),
+				segmentShape[endCase - 1].getCenterX() - segmentShape[endCase].getCenterX());
+		// And return
+		return ret;
+	}
+
 	private static final int healthWid = 60, healthHei = 20, healthX = 0, healthY = -80;
 
 	// Make health bar and set timer
@@ -195,7 +298,37 @@ public abstract class Vehicle {
 	}
 
 	// See if point inside hitbox
-	public abstract boolean pointInsideHitbox(Point2D p);
+	public boolean intersectsPoint(Point2D p) {
+		// Check each segment
+		for (int i = 0; i < segmentShape.length; i++) {
+			// If inside segment, return true
+			if (segmentShape[i].contains(p)) {
+				return true;
+			}
+		}
 
-	public abstract boolean areaIntersectsHitbox(Area a);
+		// Nope.
+		return false;
+	}
+
+	// See if shape inside hitbox
+	public boolean intersectsShape(Shape s) {
+		// Make shape area
+		Area a2 = new Area(s);
+		// Check each segment
+		for (int i = 0; i < segmentShape.length; i++) {
+			// check if intersects bounds
+			if (segmentShape[i].getBounds2D().intersects(s.getBounds2D())) {
+				// Make areas and test
+				Area a1 = new Area(segmentShape[i]);
+				a1.intersect(a2);
+				if (!a1.isEmpty()) {
+					return true;
+				}
+			}
+		}
+		// None
+		return false;
+
+	}
 }

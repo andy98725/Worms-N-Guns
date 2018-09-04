@@ -15,6 +15,7 @@ import ingame.vehicles.Tank;
 import ingame.vehicles.Vehicle;
 import ingame.vehicles.Worm;
 import main.GlobalSettings;
+import particles.Particle;
 
 public class Board {
 
@@ -24,6 +25,8 @@ public class Board {
 	protected Vehicle playerVehicle;
 	// Contains all active vehicles
 	protected ArrayList<Vehicle> vehicles = new ArrayList<Vehicle>();
+	// Contains particles to draw
+	protected ArrayList<Particle> particles = new ArrayList<Particle>();
 	// Display variables
 	protected Camera camera;
 	DrawContext context;
@@ -34,9 +37,9 @@ public class Board {
 		// Make quick terrain
 		terrain = new Terrain();
 		// Make quick worm
-		quickWorm();
+//		quickWorm();
 		// Make quick tank
-//		quickTank();
+		quickTank();
 		// Populate field
 		quickPopulate();
 		// Make camera for vehicle
@@ -44,13 +47,19 @@ public class Board {
 	}
 
 	protected void quickWorm() {
-		playerVehicle = new Worm(this, 500, 10, 0, Chunk.chunkSize / 2, 10);
+		playerVehicle = new Worm(this, 500, 10, 0, Chunk.areaDist / 2, 10);
 		context = DrawContext.WORM;
+		// Set tap controls
+		xtap = false;
+		ytap = false;
 	}
 
 	protected void quickTank() {
 		playerVehicle = new Tank(this, 500, 10, 0, 0, 60, 30);
 		context = DrawContext.TANK;
+		// Set tap controls
+		xtap = false;
+		ytap = true;
 	}
 
 	protected void quickPopulate() {
@@ -62,9 +71,25 @@ public class Board {
 	public void logic() {
 		// Do movement logic
 		movementLogic();
+		// Do particle logic
+		particleLogic();
 		// Do logic for each vehicle
 		for (Vehicle v : vehicles) {
 			v.logic();
+		}
+	}
+
+	// Particle logic
+	protected void particleLogic() {
+		// Loop through particles
+		for (int i = 0; i < particles.size(); i++) {
+			// Get particle
+			Particle p = particles.get(i);
+			// Remove particle?
+			if (p.logic()) {
+				particles.remove(i);
+				i--;
+			}
 		}
 	}
 
@@ -73,6 +98,7 @@ public class Board {
 		// Only if there's a player vehicle
 		if (playerVehicle == null)
 			return;
+		// Keyboard controls?
 		if (GlobalSettings.getKeyboardControls()) {
 			// Use keyboard
 			int xmov = 0, ymov = 0;
@@ -116,6 +142,8 @@ public class Board {
 		g.setClip(camera.getBounds());
 		// Draw background
 		drawBackground(g);
+		// Draw particles
+		drawParticles(g);
 		// Draw vehicles
 		drawVehicles(g);
 	}
@@ -123,6 +151,19 @@ public class Board {
 	// Draw background stuff
 	protected void drawBackground(Graphics2D g) {
 		terrain.draw(g, camera, context);
+	}
+
+	// Draw particle stuff
+	protected void drawParticles(Graphics2D g) {
+		// Loop through particles
+		for (int i = 0; i < particles.size(); i++) {
+			Particle p = particles.get(i);
+			// If in bounds
+			if (p.inRectangle(g.getClipBounds())) {
+				// Draw
+				p.draw(g);
+			}
+		}
 	}
 
 	// Draw vehicle stuff
@@ -145,10 +186,6 @@ public class Board {
 			v.drawOutline(g, (v.getHostile() ? Color.RED : Color.BLACK));
 			v.draw(g);
 		}
-//		// Draw vehicle
-//		for (Vehicle v : draw) {
-//			v.draw(g);
-//		}
 		// Draw vehicle GUIs
 		for (Vehicle v : vehicles) {
 			v.drawGUI(g);
@@ -183,6 +220,11 @@ public class Board {
 		vehicles.remove(v);
 	}
 
+	// Add particle to array
+	public void addParticle(Particle p) {
+		particles.add(p);
+	}
+
 	public boolean activeDamageCheck(Vehicle[] friendlies, Point2D check, int damage) {
 		// Check each vehicle if point is inside
 		for (Vehicle v : vehicles) {
@@ -199,7 +241,7 @@ public class Board {
 				continue;
 			}
 			// Check if in hitbox
-			if (v.pointInsideHitbox(check)) {
+			if (v.intersectsPoint(check)) {
 				// It is!
 				v.damage(damage);
 				return true;
@@ -212,6 +254,7 @@ public class Board {
 	// Inputs:
 	// Keyboard press. Returns if keypress is used.
 	boolean rightDown, leftDown, upDown, downDown;
+	boolean xtap, ytap;
 
 	public boolean pressKey(int keycode) {
 		// Keyboard controls
@@ -222,18 +265,38 @@ public class Board {
 			case KeyEvent.VK_UP:
 			case KeyEvent.VK_W:
 				upDown = true;
+				// Tap reset
+				if (ytap) {
+					movementLogic();
+					upDown = false;
+				}
 				return true;
 			case KeyEvent.VK_DOWN:
 			case KeyEvent.VK_S:
 				downDown = true;
+				// Tap reset
+				if (ytap) {
+					movementLogic();
+					downDown = false;
+				}
 				return true;
 			case KeyEvent.VK_LEFT:
 			case KeyEvent.VK_A:
 				leftDown = true;
+				// Tap reset
+				if (xtap) {
+					movementLogic();
+					leftDown = false;
+				}
 				return true;
 			case KeyEvent.VK_RIGHT:
 			case KeyEvent.VK_D:
 				rightDown = true;
+				// Tap reset
+				if (xtap) {
+					movementLogic();
+					rightDown = false;
+				}
 				return true;
 			}
 		}

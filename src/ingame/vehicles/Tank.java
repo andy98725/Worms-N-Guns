@@ -1,21 +1,23 @@
 package ingame.vehicles;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Stroke;
-import java.awt.geom.Area;
-import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.RectangularShape;
 
 import ingame.Board;
+import main.Game;
+import particles.WindParticle;
 
 public class Tank extends Vehicle {
-	protected double jumpVel = 300;
+	protected double jumpXVel, jumpYVel;
 	// Rectangle hitbox dimensions
 	protected double wid, hei;
 	// Direction fsm
 	protected static final int DIR_RIGHT = 0, DIR_LEFT = 1;
 	protected int direction;
+	// Air jumps
+	protected int airJumps, currentAirJumps;
+	protected double airJumpTimer;
 
 	public Tank(Board parent, int HP, int armor, double x, double y, double w, double h) {
 		super(parent, HP, armor, x, y);
@@ -32,109 +34,136 @@ public class Tank extends Vehicle {
 		setMaxSpeed(150);
 		moveSpeed = 800;
 		fric = 0.05;
+		// Set air jumps
+		airJumps = 1;
+		jumpXVel = 100;
+		jumpYVel = 300;
 		// Set starting direction
 		direction = DIR_RIGHT;
+		// Set draw colors.
+		basicFill = new Color(0, 127, 0);
+		basicOutline = new Color(0, 50, 0);
+		// Make segments
+		segmentShape = new RectangularShape[2];
+		segmentShape[0] = new Rectangle2D.Double(0, 0, wid, hei);
+		segmentShape[1] = new Rectangle2D.Double(0, 0, wid / 2, hei / 4);
 		// Update bounds
 		updateBounds();
 
 	}
 
+	// Decrement air jump timer
 	@Override
-	public void draw(Graphics2D g) {
-		// Define shell shape
-		int sx = (int) Math.round(-wid / 2);
-		int sy = (int) Math.round(-hei);
-		int sw = (int) Math.round(wid);
-		int sh = (int) Math.round(hei);
-		g.setColor(new Color(0, 127, 0));
-		g.fill(bounds);
-		// Shift to origin
-		g.translate(x, y);
-		g.fillRect(sx, sy, sw, sh);
-		// Shift back
-		g.translate(-x, -y);
-	}
-
-	@Override
-	public void drawOutline(Graphics2D g, Color c) {
-		// Deeper stroke
-		Stroke oldStroke = g.getStroke();
-		g.setStroke(new BasicStroke(4.0f));
-		// Define shell shape
-		int sx = (int) Math.round(-wid / 2);
-		int sy = (int) Math.round(-hei);
-		int sw = (int) Math.round(wid);
-		int sh = (int) Math.round(hei);
-		g.setColor(new Color(0, 63, 0));
-		g.draw(bounds);
-		// Shift to origin
-		g.translate(x, y);
-		g.drawRect(sx, sy, sw, sh);
-		// And reset
-		g.setStroke(oldStroke);
-		g.translate(-x, -y);
-	}
-
-	@Override
-	protected void updateBounds() {
-		bounds.setFrame(x - wid / 2, y - hei, wid, hei);
-	}
-
-	@Override
-	public boolean areaIntersectsHitbox(Area a) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean pointInsideHitbox(Point2D p) {
-		// Check inside main hitbox
-		if (x - wid / 2 <= p.getX() && x + wid / 2 >= p.getX() && y >= p.getY() && y - hei <= p.getY()) {
-			// Yep!
-			return true;
+	public void logic() {
+		super.logic();
+		// Decrement
+		if (airJumpTimer > 0) {
+			airJumpTimer -= Game.delta;
 		}
-		// Nope.
-		return false;
 	}
 
-	// Physics
+	// Position segments off x/y
 	@Override
-	protected void physics() {
-		super.physics();
-		updateFSM();
+	protected void updateSegments() {
+		// Update yposition if grounded (check velocity for safety
+		if(groundState == GROUNDED && yvel == 0) {
+			y = parent.getTerrain().getFloorHeight(x);;
+		}
+		// 0 is main tank
+		double wid = segmentShape[0].getWidth();
+		double hei = segmentShape[0].getHeight();
+		segmentShape[0].setFrame(x - wid / 2, y - hei, wid, hei);
+		// 1 is cannon
+		double x1 = x - wid / 2, x2 = x + wid / 2;
+		double y1 = y - hei * 2 / 3;
+		wid = segmentShape[1].getWidth();
+		hei = segmentShape[1].getHeight();
+		segmentShape[1].setFrame(direction == DIR_LEFT ? x1 - wid : x2, y1 - hei / 2, wid, hei);
 	}
 
-	protected void updateFSM() {
-		// Manage grounded FSM
-		int floor = parent.getTerrain().getFloorHeight(x);
-		if (y >= floor) {
+	// Set physics from FSM
+	@Override
+	protected void setFSMState(int state) {
+		switch (state) {
+		default:
+		case GROUNDED:
+			// Set y each frame
+			y = parent.getTerrain().getFloorHeight(x);
+			// Refresh air jumps
+			currentAirJumps = airJumps;
 			// Ground physics
-			groundState = GROUNDED;
-			y = floor;
 			yvel = 0;
 			yacc = 0;
+			useGravity = false;
 			useFriction = true;
 			useMaxSpeed = true;
-
-		} else {
-			groundState = AIRBORNE;
+			// Set
+			groundState = GROUNDED;
+			break;
+		case AIRBORNE:
 			// Air physics
 			xacc = 0;
-			yacc = gravity;
+			yacc = 0;
+			useGravity = true;
 			useFriction = false;
 			useMaxSpeed = false;
+			groundState = AIRBORNE;
+			break;
 		}
-
 	}
 
+	// Move (x) or jump (y)
 	@Override
 	public void accelerate(double x, double y) {
-		// Cannot move in the air
 		if (groundState == AIRBORNE) {
+			// Air jump?
+			if (currentAirJumps > 0 && y < 0 && airJumpTimer <= 0) {
+				currentAirJumps--;
+				airJumpTimer = 0.2;
+				// Set velocities
+				yvel = -jumpYVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+				// Add particles from jump and set direction/velocity
+				switch ((int) Math.signum(x)) {
+				default:
+				case 0:
+					xvel = 0;
+					// Add particles
+					// Down particle, left position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_DOWN, this.x - wid / 2, this.y + hei / 4, 100));
+					// Down particle, right position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_DOWN, this.x + wid / 2, this.y + hei / 4, 100));
+					break;
+				case -1:
+					xvel = -jumpXVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+					direction = DIR_LEFT;
+					// Add particles
+					// Down particle, left position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_DOWN, this.x - wid / 2, this.y + hei / 4, 100));
+					// Right particle, right position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_RIGHT, this.x + wid / 2, this.y + hei / 4, 100));
+					break;
+				case 1:
+					xvel = jumpXVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+					direction = DIR_RIGHT;
+					// Add particles
+					// Left particle, left position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_LEFT, this.x - wid / 2, this.y + hei / 4, 100));
+					// Down particle, right position
+					parent.addParticle(
+							new WindParticle(2, WindParticle.DIR_DOWN, this.x + wid / 2, this.y + hei / 4, 100));
+					break;
+				}
+			}
 			return;
 		}
+		// Ground movement:
 		// X movement
-		// Silence to 1
+		// ceil to 1
 		if (Math.abs(x) > 1) {
 			x = Math.signum(x);
 		}
@@ -151,13 +180,9 @@ public class Tank extends Vehicle {
 		if (y != 0) {
 			if (y < 0) {
 				// Jump!
-				yvel = -jumpVel * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
-				// Air physics
-				groundState = AIRBORNE;
-				xacc = 0;
-				yacc = gravity;
-				useFriction = false;
-				useMaxSpeed = false;
+				yvel = -jumpYVel * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+				airJumpTimer = 0.2;
+				setFSMState(AIRBORNE);
 			}
 		}
 
