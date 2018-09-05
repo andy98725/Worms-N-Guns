@@ -19,8 +19,8 @@ public abstract class ScreenRender {
 		frameHei = WormsNGuns.frame.getHeight();
 
 		// Do sizing updates
-		if (WormsNGuns.app != null) {
-			WormsNGuns.app.setDimension(frameWid, frameHei);
+		if (WormsNGuns.game != null) {
+			WormsNGuns.game.setDimensions(frameWid, frameHei);
 		}
 		if (Game.board != null) {
 			Game.board.setDimensions(frameWid, frameHei);

@@ -1,62 +1,35 @@
 package ingame.vehicles;
 
-import java.awt.Color;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.RectangularShape;
 
 import ingame.Board;
+import ingame.vehicles.types.WormType;
 import main.Game;
 
 public class Worm extends Vehicle {
-
 	// Movement stats
-	double thetaNudge, thetaNudgeRange;
+	double thetaNudgeAccel, thetaNudgeRange;
 	// Segments stats
-	int segments;
 	double[] segmentYvel;
 	double[] segmentLength;
 
 	// Make new worm
-	public Worm(Board parent, int HP, int armor, double x, double y, int length) {
-		super(parent, HP, armor, x, y);
-		// Save segments
-		segments = length;
-		// Init other settings
-		initDefaults();
+	public Worm(Board parent, double x, double y, WormType t) {
+		super(parent, x, y, t);
 	}
 
 	@Override
-	protected void initDefaults() {
-		// Set friction (amount of momentum retained/frame approx)
-		fric = 0.3;
-		// Set physics data
-		setMaxSpeed(segments * 40);
-		moveSpeed = 1400;
-		gravity = new double[] { 0, 250, 500 };
+	protected void pullFromEnum() {
+		// Do super
+		super.pullFromEnum();
+		// Get worm type
+		WormType wormType = (WormType) type;
 		// Set nudge speed per second
-		thetaNudge = 1;
-		thetaNudgeRange = Math.PI / 2;
-		// Draw data
-		basicFill = Color.GRAY;
-		basicOutline = Color.DARK_GRAY;
-		// Make segments data
-		segmentShape = new Ellipse2D.Double[segments];
-		segmentYvel = new double[segments];
-		segmentLength = new double[segments];
-		// Calculate individual values
-		double initialRad = 32;
-		segmentShape[0] = new Ellipse2D.Double(x - initialRad, y - initialRad, 2*initialRad, 2*initialRad);
-		segmentLength[0] = 32;
-		segmentYvel[0] = 0;
-		// Iterate
-		for (int i = 1; i < segments; i++) {
-			double len = segmentShape[i - 1].getWidth() * 0.95;
-			segmentLength[i] = 0.95 * segmentLength[i - 1];
-			segmentShape[i] = new Ellipse2D.Double(x - len / 2, y - len / 2, len, len);
-			segmentYvel[i] = 0;
-		}
-		// Update bounds
-		updateBounds();
+		thetaNudgeAccel = wormType.getNudgeAccel();
+		thetaNudgeRange = wormType.getNudgeRange();
+		// Get segments data
+		segmentYvel = wormType.getInitialYvels();
+		segmentLength = wormType.getLengths();
 	}
 
 	@Override
@@ -108,7 +81,7 @@ public class Worm extends Vehicle {
 		RectangularShape base = segmentShape[0];
 		base.setFrame(x - base.getWidth() / 2, y - base.getHeight(), base.getWidth(), base.getHeight());
 		// Iteratively
-		for (int i = 1; i < segments; i++) {
+		for (int i = 1; i < segmentShape.length; i++) {
 			// Get relevant segment
 			RectangularShape seg = segmentShape[i];
 			// If aboveground, apply gravity
@@ -178,7 +151,7 @@ public class Worm extends Vehicle {
 			return;
 		}
 		// Multiply by nudge factor and delta
-		diffTheta *= Math.min(1, thetaNudge * Game.delta);
+		diffTheta *= Math.min(1, thetaNudgeAccel * Game.delta);
 		// Get new angle
 		curTheta += diffTheta;
 		// Nudge in direction

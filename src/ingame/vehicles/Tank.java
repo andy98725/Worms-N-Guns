@@ -1,55 +1,45 @@
 package ingame.vehicles;
 
-import java.awt.Color;
-import java.awt.geom.Rectangle2D;
-import java.awt.geom.RectangularShape;
+import java.util.Random;
 
 import ingame.Board;
+import ingame.vehicles.types.TankType;
 import main.Game;
 import particles.WindParticle;
 
 public class Tank extends Vehicle {
-	protected double jumpXVel, jumpYVel;
-	// Rectangle hitbox dimensions
+	// Width and height
 	protected double wid, hei;
+	// Jump speed
+	protected double jumpVelocity;
 	// Direction fsm
 	protected static final int DIR_RIGHT = 0, DIR_LEFT = 1;
 	protected int direction;
 	// Air jumps
 	protected int airJumps, currentAirJumps;
 	protected double airJumpTimer;
+	protected double airJumpX, airJumpY;
 
-	public Tank(Board parent, int HP, int armor, double x, double y, double w, double h) {
-		super(parent, HP, armor, x, y);
-		// Set rectangle dimensions
-		wid = w;
-		hei = h;
-		// Init other settings
-		initDefaults();
+	public Tank(Board parent, double x, double y, TankType t) {
+		super(parent, x, y, t);
+		// Set starting direction
+		direction = new Random().nextBoolean() ? DIR_LEFT : DIR_RIGHT;
 	}
 
 	@Override
-	protected void initDefaults() {
-		// Set top speed
-		setMaxSpeed(150);
-		moveSpeed = 800;
-		fric = 0.05;
-		// Set air jumps
-		airJumps = 1;
-		jumpXVel = 100;
-		jumpYVel = 300;
-		// Set starting direction
-		direction = DIR_RIGHT;
-		// Set draw colors.
-		basicFill = new Color(0, 127, 0);
-		basicOutline = new Color(0, 50, 0);
-		// Make segments
-		segmentShape = new RectangularShape[2];
-		segmentShape[0] = new Rectangle2D.Double(0, 0, wid, hei);
-		segmentShape[1] = new Rectangle2D.Double(0, 0, wid / 2, hei / 4);
-		// Update bounds
-		updateBounds();
-
+	protected void pullFromEnum() {
+		// Do super
+		super.pullFromEnum();
+		// Get tankType
+		TankType tankType = (TankType) type;
+		// Set dimensions
+		wid = tankType.getWid();
+		hei = tankType.getHei();
+		// Set jump stats
+		jumpVelocity = tankType.getJumpVelocity();
+		airJumps = tankType.getAirJumps();
+		airJumpX = tankType.getAirJumpXVel();
+		airJumpY = tankType.getAirJumpYVel();
 	}
 
 	// Decrement air jump timer
@@ -65,9 +55,9 @@ public class Tank extends Vehicle {
 	// Position segments off x/y
 	@Override
 	protected void updateSegments() {
-		// Update yposition if grounded (check velocity for safety
-		if(groundState == GROUNDED && yvel == 0) {
-			y = parent.getTerrain().getFloorHeight(x);;
+		// Update yposition if grounded (check velocity for safety)
+		if (groundState == GROUNDED && yvel == 0) {
+			y = parent.getTerrain().getFloorHeight(x);
 		}
 		// 0 is main tank
 		double wid = segmentShape[0].getWidth();
@@ -121,7 +111,7 @@ public class Tank extends Vehicle {
 				currentAirJumps--;
 				airJumpTimer = 0.2;
 				// Set velocities
-				yvel = -jumpYVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+				yvel = -airJumpY * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
 				// Add particles from jump and set direction/velocity
 				switch ((int) Math.signum(x)) {
 				default:
@@ -136,7 +126,7 @@ public class Tank extends Vehicle {
 							new WindParticle(2, WindParticle.DIR_DOWN, this.x + wid / 2, this.y + hei / 4, 100));
 					break;
 				case -1:
-					xvel = -jumpXVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+					xvel = -airJumpX * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
 					direction = DIR_LEFT;
 					// Add particles
 					// Down particle, left position
@@ -147,7 +137,7 @@ public class Tank extends Vehicle {
 							new WindParticle(2, WindParticle.DIR_RIGHT, this.x + wid / 2, this.y + hei / 4, 100));
 					break;
 				case 1:
-					xvel = jumpXVel* (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+					xvel = airJumpX * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
 					direction = DIR_RIGHT;
 					// Add particles
 					// Left particle, left position
@@ -180,7 +170,7 @@ public class Tank extends Vehicle {
 		if (y != 0) {
 			if (y < 0) {
 				// Jump!
-				yvel = -jumpYVel * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
+				yvel = -jumpVelocity * (sprinting ? Math.sqrt(sprintMultiplier) : 1.0);
 				airJumpTimer = 0.2;
 				setFSMState(AIRBORNE);
 			}

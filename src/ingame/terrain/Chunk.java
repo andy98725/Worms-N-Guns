@@ -3,20 +3,24 @@ package ingame.terrain;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
+import ingame.vehicles.Tank;
+import ingame.vehicles.types.TankType;
 import main.Game;
 import util.OpenSimplexNoise;
 import util.QuickMath;
 
 public class Chunk {
-	// Chunk pixel size
+	// Terrain
+	protected final Terrain par;
+	// Chunk pixel sizes
 	public static final int areaDist = 512;
-	public static final int chunkSize = 256;
+	public final int chunkSize;
 	// Internal chunk constants
 	protected static final int soilHeight = 10, soilMaxHeight = 90;
 
 	// Data types
 	protected static final int CH_REGULAR = 0, CH_DARK = 1, CH_CLOUD = 2, CH_SKY = 3, CH_IRON = 4, CH_GOLD = 5,
-			CH_OIL = 6;
+			CH_SOIL = 6;
 	int[][] chunkData;
 	boolean[][] chunkDataLock;
 	// Floor height
@@ -30,11 +34,13 @@ public class Chunk {
 	protected BufferedImage chunkDisp;
 
 	// Make chunk
-	public Chunk(int x, int y, OpenSimplexNoise noi) {
+	public Chunk(Terrain p, int x, int y, OpenSimplexNoise noi) {
 		// Save vars
+		this.par = p;
 		this.x = x;
 		this.y = y;
 		noise = noi;
+		chunkSize = Terrain.chunkSize;
 		// Make image
 		genChunk();
 	}
@@ -42,156 +48,247 @@ public class Chunk {
 	// Noise offsets
 	protected static final double ironRNGOffset = 1000, goldRNGOffset = 2000, oilRNGOffset = -1000;
 
-	// Make display image
+	// Generate chunk
 	protected void genChunk() {
 		// Make arrays
 		chunkData = new int[chunkSize][chunkSize];
 		chunkDataLock = new boolean[chunkSize][chunkSize];
+		// Generate underground
+		genUnderground();
+		// Soil line
+		genSurface();
+		// Sky chunk
+		genSky();
+		// Make image
+		createDisplayImage();
+	}
+
+	// Make chunk image
+	protected void createDisplayImage() {
 		// Nontransparent, size of chunk
 		chunkDisp = new BufferedImage(chunkSize, chunkSize, BufferedImage.TYPE_INT_RGB);
 		// Get graphics
 		Graphics2D g = (Graphics2D) chunkDisp.getGraphics();
-		// Underground chunk
-		if (y >= 0) {
-			// Background (Defaults to regular)
-			g.setColor(Game.textures.dirtColor);
-			g.fillRect(0, 0, chunkSize, chunkSize);
-
-			// Loop CH_DARK
-			g.setColor(Game.textures.darkDirtColor);
+		// Loop through pixels
+		for (int i = 0; i < chunkSize; i++) {
 			for (int j = 0; j < chunkSize; j++) {
-				int locY = (chunkSize * y + j);
-				// Calc threshold for height
-				double darkThreshold = QuickMath.lerp(0.7, -0.7, locY / (10.0 * areaDist));
-				double darkLockThreshold = QuickMath.lerp(1.0, 0.5, locY / (10.0 * areaDist));
-				double regularLockThreshold = QuickMath.lerp(-0.3, -0.9, locY / (10.0 * areaDist));
-				for (int i = 0; i < chunkSize; i++) {
-					int locX = (chunkSize * x + i);
-					// Do eval
-					double eval = noise.eval(locX / 100.0, locY / 100.0);
-					if (eval > darkThreshold) {
-						// Set point to dark
-						chunkData[i][j] = CH_DARK;
-						g.drawLine(i, j, i, j);
-						// Check if lock
-						if (eval > darkLockThreshold) {
-							chunkDataLock[i][j] = true;
-						}
-						// check regular locked?
-					} else if (eval < regularLockThreshold) {
-						// Set point to regular and lock
-						chunkData[i][j] = CH_REGULAR;
-						chunkDataLock[i][j] = true;
-					}
+				// Color according to ID
+				switch (chunkData[i][j]) {
+				default:
+				case CH_REGULAR:
+					g.setColor(Game.textures.dirtColor);
+					break;
+				case CH_SOIL:
+					g.setColor(Game.textures.soilColor);
+					break;
+				case CH_DARK:
+					g.setColor(Game.textures.darkDirtColor);
+					break;
+				case CH_IRON:
+					g.setColor(Game.textures.ironColor);
+					break;
+				case CH_GOLD:
+					g.setColor(Game.textures.goldColor);
+					break;
+				case CH_SKY:
+					g.setColor(Game.textures.skyColor);
+					break;
+				case CH_CLOUD:
+					g.setColor(Game.textures.cloudColor);
+					break;
 				}
+				// Color point
+				g.drawLine(i, j, i, j);
 			}
-			// Loop CH_GOLD
-			g.setColor(Game.textures.goldColor);
-			for (int j = 0; j < chunkSize; j++) {
-				// Get yloc
-				int locY = (chunkSize * y + j);
-				// Calc threshold for height
-				double goldThreshold = QuickMath.lerp(0.82, 0.72, locY / (10.0 * areaDist));
-				double goldLockThreshold = QuickMath.lerp(0.835, 0.735, locY / (10.0 * areaDist));
-				for (int i = 0; i < chunkSize; i++) {
-					// Skip if locked
-					if (chunkDataLock[i][j])
-						continue;
-					// Get xloc
-					int locX = (chunkSize * x + i);
-					// Do eval
-					double eval = noise.eval(locX / 100.0, -locY / 120.0 + goldRNGOffset);
-					if (eval > goldThreshold) {
-						chunkData[i][j] = CH_GOLD;
-						g.drawLine(i, j, i, j);
-						// Check if lock
-						if (eval > goldLockThreshold) {
-							chunkDataLock[i][j] = true;
-						}
-					}
-				}
-			}
-
-			// Loop CH_IRON
-			g.setColor(Game.textures.ironColor);
-			// Height loop
-			for (int j = 0; j < chunkSize; j++) {
-				// Calculate locy
-				int locY = (chunkSize * y + j);
-				// Calc threshold for height
-				double ironThreshold = QuickMath.lerp(0.78, 0.68, locY / (10.0 * areaDist));
-				double ironLockThreshold = QuickMath.lerp(0.82, 0.72, locY / (10.0 * areaDist));
-				// Width loop
-				for (int i = 0; i < chunkSize; i++) {
-					// Skip if locked
-					if (chunkDataLock[i][j])
-						continue;
-					// Calculate locx
-					int locX = (chunkSize * x + i);
-					// Do eval
-					double eval = noise.eval(locX / 260.0, -locY / 200.0 + ironRNGOffset);
-					if (eval > ironThreshold) {
-						g.drawLine(i, j, i, j);
-						chunkData[i][j] = CH_IRON;
-						// Check if lock
-						if (eval > ironLockThreshold) {
-							chunkDataLock[i][j] = true;
-						}
-					}
-				}
-			}
-
 		}
 
-		// Soil line
-		if (y == 0) {
-			// Calculate floor heights
-			floorHeight = new int[chunkSize];
+	}
+
+	protected void genUnderground() {
+		// Don't do if above ground
+		if (y < 0)
+			return;
+		// Loop CH_DARK and CH_REGULAR
+		for (int j = 0; j < chunkSize; j++) {
+			int locY = (chunkSize * y + j);
+			// Calc threshold for height
+			double darkThreshold = QuickMath.lerp(0.7, -0.7, locY / (10.0 * areaDist));
+			double darkLockThreshold = QuickMath.lerp(1.0, 0.5, locY / (10.0 * areaDist));
+			double regularLockThreshold = QuickMath.lerp(-0.3, -0.9, locY / (10.0 * areaDist));
 			for (int i = 0; i < chunkSize; i++) {
-				// Calculate xpos used for noise
-				double noiseX = (chunkSize * x + i) / 200.0;
-				// Calculate y locs
-				int yy = (int) Math.round((soilMaxHeight + soilMaxHeight * noise.eval(0, noiseX)) / 2);
-				int topy = yy - soilHeight / 2, boty = yy + soilHeight / 2;
-				// Get floor height
-				floorHeight[i] = topy;
-				// Draw sky line to top
-				g.setColor(Game.textures.skyColor);
-				g.drawLine(i, 0, i, topy);
-				// Draw soil line
-				g.setColor(Game.textures.soilColor);
-				g.drawLine(i, topy, i, boty);
+				int locX = (chunkSize * x + i);
+				// Do eval
+				double eval = noise.eval(locX / 100.0, locY / 100.0);
+				if (eval > darkThreshold) {
+					// Set point to dark
+					chunkData[i][j] = CH_DARK;
+					// Check if lock
+					if (eval > darkLockThreshold) {
+						chunkDataLock[i][j] = true;
+					}
+					// check regular locked?
+				} else if (eval < regularLockThreshold) {
+					// Set point to regular and lock
+					chunkData[i][j] = CH_REGULAR;
+					chunkDataLock[i][j] = true;
+				}
 			}
 		}
-		// Sky chunk
-		if (y < 0) {
-			// Background
-			g.setColor(Game.textures.skyColor);
-			g.fillRect(0, 0, chunkSize, chunkSize);
-			// Loop clouds
-			g.setColor(Game.textures.cloudColor);
-			for (int j = 0; j < chunkSize; j += 1) {
-				int locY = (chunkSize * y + j);
-				// Calc threshold for height
-				double threshold = QuickMath.lerp(1.0, -0.4, -locY / (3.0 * areaDist));
-				for (int i = 0; i < chunkSize; i += 1) {
-					int locX = (chunkSize * x + i);
-					// Do eval
-					if (noise.eval(locX / 400.0, locY / 200.0) > threshold) {
-						// Make cloud
-						g.drawLine(i, j, i, j);
-						chunkData[i][j] = CH_CLOUD;
-						chunkDataLock[i][j] = true;
-					} else {
-						// Default to sky
-						chunkData[i][j] = CH_SKY;
+		// Loop CH_GOLD
+		for (int j = 0; j < chunkSize; j++) {
+			// Get yloc
+			int locY = (chunkSize * y + j);
+			// Calc threshold for height
+			double goldThreshold = QuickMath.lerp(0.82, 0.72, locY / (10.0 * areaDist));
+			double goldLockThreshold = QuickMath.lerp(0.835, 0.735, locY / (10.0 * areaDist));
+			for (int i = 0; i < chunkSize; i++) {
+				// Skip if locked
+				if (chunkDataLock[i][j])
+					continue;
+				// Get xloc
+				int locX = (chunkSize * x + i);
+				// Do eval
+				double eval = noise.eval(locX / 100.0, -locY / 120.0 + goldRNGOffset);
+				if (eval > goldThreshold) {
+					// Set
+					chunkData[i][j] = CH_GOLD;
+					// Check if lock
+					if (eval > goldLockThreshold) {
 						chunkDataLock[i][j] = true;
 					}
 				}
-
 			}
 		}
 
+		// Loop CH_IRON
+		for (int j = 0; j < chunkSize; j++) {
+			// Calculate locy
+			int locY = (chunkSize * y + j);
+			// Calc threshold for height
+			double ironThreshold = QuickMath.lerp(0.78, 0.68, locY / (10.0 * areaDist));
+			double ironLockThreshold = QuickMath.lerp(0.82, 0.72, locY / (10.0 * areaDist));
+			// Width loop
+			for (int i = 0; i < chunkSize; i++) {
+				// Skip if locked
+				if (chunkDataLock[i][j])
+					continue;
+				// Calculate locx
+				int locX = (chunkSize * x + i);
+				// Do eval
+				double eval = noise.eval(locX / 260.0, -locY / 200.0 + ironRNGOffset);
+				if (eval > ironThreshold) {
+					// Set
+					chunkData[i][j] = CH_IRON;
+					// Check if lock
+					if (eval > ironLockThreshold) {
+						chunkDataLock[i][j] = true;
+					}
+				}
+			}
+		}
+	}
+
+	// Generate surface level
+	protected void genSurface() {
+		// Only done at surface level
+		if (y != 0)
+			return;
+		// Calculate floor heights
+		floorHeight = new int[chunkSize];
+		for (int i = 0; i < chunkSize; i++) {
+			// Calculate xpos used for noise
+			double noiseX = (chunkSize * x + i) / 200.0;
+			// Calculate y locs
+			int yy = (int) Math.round((soilMaxHeight + soilMaxHeight * noise.eval(0, noiseX)) / 2);
+			int topy = yy - soilHeight / 2, boty = yy + soilHeight / 2;
+			// Get floor height
+			floorHeight[i] = topy;
+			// Sky loop
+			for (int j = 0; j < topy; j++) {
+				chunkData[i][j] = CH_SKY;
+				chunkDataLock[i][j] = true;
+			}
+			// Soil loop
+			for (int j = topy; j < boty; j++) {
+				chunkData[i][j] = CH_SOIL;
+				chunkDataLock[i][j] = true;
+			}
+		}
+	}
+
+	protected void genSky() {
+		// Only do if sky
+		if (y >= 0)
+			return;
+		// Loop clouds
+		for (int j = 0; j < chunkSize; j += 1) {
+			int locY = (chunkSize * y + j);
+			// Calc threshold for height
+			double threshold = QuickMath.lerp(1.0, -0.4, -locY / (3.0 * areaDist));
+			for (int i = 0; i < chunkSize; i += 1) {
+				int locX = (chunkSize * x + i);
+				// Do eval
+				if (noise.eval(locX / 400.0, locY / 200.0) > threshold) {
+					// Make cloud
+					chunkData[i][j] = CH_CLOUD;
+					chunkDataLock[i][j] = true;
+				} else {
+					// Make sky
+					chunkData[i][j] = CH_SKY;
+					chunkDataLock[i][j] = true;
+				}
+			}
+
+		}
+	}
+
+	// Generate vehicles
+	public void genVehicles() {
+		// Make tanks
+		genTanks();
+		// Make worms
+		genWorms();
+	}
+
+	protected final static double tankConcentration = 1.8;
+
+	// Make tanks
+	protected void genTanks() {
+		// Only generate at surface
+		if (y != 0)
+			return;
+		if (y == 0) {
+			// Do tanks
+			double eval = noise.eval(x, x);
+			int tankCount = (int) Math.round(tankConcentration / 4 + eval * tankConcentration / 2);
+			for (int i = 0; i < tankCount; i++) {
+				TankType type;
+				// Determine type from digits
+				double rand = (Math.abs(eval) * Math.pow(10, i + 2)) % 1.0;
+				double rand2 = (Math.abs(eval) * Math.pow(8, i + 2)) % 1.0;
+				if (rand < 0.6) {
+					type = TankType.BASIC;
+				} else if (rand < 0.9) {
+					type = TankType.TANKY;
+				} else {
+					type = TankType.SPEEDY;
+				}
+				// Make new tank
+				// Determine position in chunk
+				int xx = x * chunkSize;
+				int xoff = (int) Math.floor(rand2 * chunkSize);
+				// Make tank at position
+				new Tank(par.getBoard(), xx + xoff, floorHeight[xoff], type);
+			}
+		}
+	}
+
+	protected final static double wormConcentration = 1;
+
+	protected void genWorms() {
+		// Only generate at surface or underground
+		if (y < 0)
+			return;
 	}
 
 	// Draw chunk

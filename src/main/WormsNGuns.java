@@ -5,12 +5,10 @@ import java.awt.EventQueue;
 import java.awt.Toolkit;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
-import util.Debug;
+import util.ThreadLoop;
 
-public class WormsNGuns extends JPanel implements Runnable {
-	private static final long serialVersionUID = 1L;
+public class WormsNGuns extends ThreadLoop {
 	// Container
 	public static JFrame frame;
 	// Application
@@ -18,31 +16,30 @@ public class WormsNGuns extends JPanel implements Runnable {
 	// Game object
 	public static Game game;
 
-	// Main thread
-	private Thread mainLoop;
 	// Display settings
 	protected static boolean isFullscreen = false;
 	public static final int defaultWid = 1280, defaultHei = 1024;
+
 	// Init defaults
 	protected WormsNGuns() {
 		// Make game
 		game = new Game();
-		// Add to rendering
-		add(game);
+		// Start thread
+		setFrameRate(Game.frameRate);
+		startThread("Main Game");
 	}
-	public void setDimension(int wid, int hei) {
-		setBounds(0, 0, wid, hei);
-		game.setBounds(0, 0, wid, hei);
-	}
-	
+
 	// Fullscreen toggle
 	public static void refreshWindow(boolean fullscreen) {
-		// Thread
-		app.mainLoop.interrupt();
+		// End thread
+		app.interruptThread();
 		// Kill old window
 		frame.dispose();
 		// Make new window
 		initWindow(fullscreen);
+		// Make new thread
+		app.setFrameRate(Game.frameRate);
+		app.startThread("Main Game");
 	}
 
 	// Make container window
@@ -61,7 +58,8 @@ public class WormsNGuns extends JPanel implements Runnable {
 		// Set fullscreen
 		isFullscreen = fullscreen;
 		// Add app
-		frame.add(app);
+//		frame.add(app);
+		frame.add(game);
 		// Let user select (to get key inputs)
 		frame.setFocusable(true);
 		// Add inputs
@@ -76,6 +74,14 @@ public class WormsNGuns extends JPanel implements Runnable {
 		frame.setTitle("Worms & Guns");
 		// Close app on close
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		// Disable Game.running on close as well
+//		frame.addWindowListener(new WindowAdapter() {
+//			@Override
+//			public void windowClosing(WindowEvent e) {
+//				Game.running = false;
+//				e.getWindow().dispose();
+//			}
+//		});
 		// Pack dimensions
 		frame.pack();
 		// Center
@@ -96,50 +102,20 @@ public class WormsNGuns extends JPanel implements Runnable {
 		});
 	}
 
-	// On window run, start rendering
-	@Override
-	public void addNotify() {
-		super.addNotify();
-		mainLoop = new Thread(this);
-		mainLoop.start();
-	}
-
-	// Main loop
-	@Override
-	public void run() {
-		// Declare timing variables
-		long prevFrame = System.nanoTime(), sleep = 0;
-		Game.time = 0;
-		while (Game.running && !Thread.currentThread().isInterrupted()) {
-			// Nanoseconds to seconds
-			Game.delta = (System.nanoTime() - prevFrame) / 1000000000.0;
-			Game.time += Game.delta;
-			// Update frame timing
-			prevFrame = System.nanoTime();
-			Game.frame++;
-			// Do game logic
-			game.logic();
-			// Repaint
-			repaint();
-			// Calculate pause time (in MS)
-			sleep = (long) (1000.0 / Game.frameRate) - (System.nanoTime() - prevFrame) / 1000000;
-			if (sleep < 0)
-				sleep = 0;
-			// Delay frame
-			try {
-				Thread.sleep(sleep);
-			} catch (InterruptedException e) {
-				System.out.println("Interrupted: " + e.getMessage());
-				Debug.log("Interrupted: " + e.getMessage());
-				return;
-			}
-
-		}
-
-	}
-
 	public static boolean getIsFullscreen() {
 		return isFullscreen;
+	}
+
+	// Loop each frame
+	@Override
+	protected void doLoop() {
+		// Copy data
+		Game.delta = delta;
+		Game.frame = frameCount;
+		// Do game logic
+		game.logic();
+		// Repaint
+		game.repaint();
 	}
 
 }

@@ -8,12 +8,13 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 
-import ingame.terrain.Chunk;
 import ingame.terrain.DrawContext;
 import ingame.terrain.Terrain;
 import ingame.vehicles.Tank;
 import ingame.vehicles.Vehicle;
 import ingame.vehicles.Worm;
+import ingame.vehicles.types.TankType;
+import ingame.vehicles.types.WormType;
 import main.GlobalSettings;
 import particles.Particle;
 
@@ -34,20 +35,20 @@ public class Board {
 
 	// Temporary/Quick startup
 	public Board() {
-		// Make quick terrain
-		terrain = new Terrain();
+		// Make terrain
+		terrain = new Terrain(this);
 		// Make quick worm
-//		quickWorm();
+		quickWorm();
 		// Make quick tank
-		quickTank();
-		// Populate field
-		quickPopulate();
+//		quickTank();
 		// Make camera for vehicle
 		camera = new VehicleCamera(playerVehicle);
 	}
 
 	protected void quickWorm() {
-		playerVehicle = new Worm(this, 500, 10, 0, Chunk.areaDist / 2, 10);
+		WormType type = WormType.SPEEDY;
+		playerVehicle = new Worm(this, 0, 400, type);
+		playerVehicle.setPosition(200, 400);
 		context = DrawContext.WORM;
 		// Set tap controls
 		xtap = false;
@@ -55,16 +56,15 @@ public class Board {
 	}
 
 	protected void quickTank() {
-		playerVehicle = new Tank(this, 500, 10, 0, 0, 60, 30);
+		TankType type = TankType.BASIC;
+		playerVehicle = new Tank(this, 0, 0, type);
 		context = DrawContext.TANK;
 		// Set tap controls
 		xtap = false;
 		ytap = true;
 	}
-
-	protected void quickPopulate() {
-		new Tank(this, 100, 0, -100, -200, 40, 20);
-		new Tank(this, 100, 0, 300, -100, 40, 20);
+	public Vehicle getPlayer() {
+		return playerVehicle;
 	}
 
 	// Calculations
@@ -74,8 +74,8 @@ public class Board {
 		// Do particle logic
 		particleLogic();
 		// Do logic for each vehicle
-		for (Vehicle v : vehicles) {
-			v.logic();
+		for (int i = 0; i < vehicles.size(); i++) {
+			vehicles.get(i).logic();
 		}
 	}
 
@@ -171,7 +171,8 @@ public class Board {
 		// Determine which vehicles to draw
 		ArrayList<Vehicle> draw = new ArrayList<Vehicle>();
 		Rectangle2D bounds = camera.getBounds();
-		for (Vehicle v : vehicles) {
+		for (int i = 0; i < vehicles.size(); i++) {
+			Vehicle v = vehicles.get(i);
 			// Always draw player vehicle so skip
 			if (v == playerVehicle)
 				continue;
@@ -187,7 +188,7 @@ public class Board {
 			v.draw(g);
 		}
 		// Draw vehicle GUIs
-		for (Vehicle v : vehicles) {
+		for (Vehicle v : draw) {
 			v.drawGUI(g);
 		}
 		// Draw player last
@@ -200,8 +201,13 @@ public class Board {
 	public void setDimensions(int wid, int hei) {
 		screenWid = wid;
 		screenHei = hei;
+		// Set camera dimensions
 		if (camera != null) {
 			camera.setDimensions(wid, hei);
+		}
+		// Set terrain dimensions
+		if (terrain != null) {
+			terrain.setDimensions(wid, hei);
 		}
 	}
 
@@ -227,7 +233,8 @@ public class Board {
 
 	public boolean activeDamageCheck(Vehicle[] friendlies, Point2D check, int damage) {
 		// Check each vehicle if point is inside
-		for (Vehicle v : vehicles) {
+		for (int i = 0; i < vehicles.size(); i++) {
+			Vehicle v = vehicles.get(i);
 			// Make sure not in passed in list
 			boolean isContained = false;
 			for (Vehicle v2 : friendlies) {

@@ -12,6 +12,7 @@ import java.awt.geom.RectangularShape;
 import java.awt.image.BufferedImage;
 
 import ingame.Board;
+import ingame.vehicles.types.VehicleType;
 import main.Game;
 import util.GraphicsFunctions;
 
@@ -19,6 +20,8 @@ public abstract class Vehicle {
 
 	// Home
 	protected Board parent;
+	// Vehicle type
+	protected VehicleType type;
 	// Position stats
 	protected double x, y, xvel, yvel, xacc, yacc;
 	protected RectangularShape[] segmentShape;
@@ -50,24 +53,46 @@ public abstract class Vehicle {
 	protected boolean isHostile = false;
 
 	// Create new vehicle
-	public Vehicle(Board parent, int HP, int armor, double x, double y) {
+	public Vehicle(Board parent, double x, double y, VehicleType t) {
 		this.parent = parent;
-		this.mHP = HP;
-		this.HP = mHP;
-		this.armor = armor;
+		this.type = t;
 		this.x = x;
 		this.y = y;
 		// Add to parent
 		parent.addVehicle(this);
 		// Make bounds
 		bounds = new Rectangle2D.Double();
+		// Pull data
+		pullFromEnum();
+		// Update segents
+		updateSegments();
+		// Update FSM
+		updateFSM();
+		// Update bounds
+		updateBounds();
 	}
 
-	// Individual class defaults initialization
-	protected abstract void initDefaults();
+	// Pull data from enum
+	protected void pullFromEnum() {
+		// Get shape
+		segmentShape = type.getShape();
+		// Get speed stats
+		setMaxSpeed(type.getMaxSpeed());
+		moveSpeed = type.getAcceleration();
+		fric = type.getFriction();
+		gravity = type.getGravity();
+		// Get draw data
+		basicFill = type.getDebugFill();
+		basicOutline = type.getDebugOutline();
+		// Get health stats
+		mHP = type.getHP();
+		armor = type.getArmor();
+		HP = mHP;
+	}
 
 	// General logic
 	public void logic() {
+		// Do physics
 		physics();
 		// Update segents
 		updateSegments();
@@ -210,6 +235,45 @@ public abstract class Vehicle {
 			// Decrement timer
 			healthTimer -= Game.delta;
 		}
+	}
+
+	// Set x location. Assume surface level
+	public void setPosition(double x) {
+		this.x = x;
+		this.y = parent.getTerrain().getFloorHeight(x);
+		// Update segents
+		updateSegments();
+		// Update FSM
+		updateFSM();
+		// Update bounds
+		updateBounds();
+	}
+
+	// Set x/y location
+	public void setPosition(double x, double y) {
+		this.x = x;
+		this.y = y;
+		// Update segents
+		updateSegments();
+		// Update FSM
+		updateFSM();
+		// Update bounds
+		updateBounds();
+	}
+
+	// Set x/y location and speed
+	public void setPosition(double x, double y, double xv, double yv) {
+		this.x = x;
+		this.y = y;
+		this.xvel = xv;
+		this.yvel = yv;
+		// Update segents
+		updateSegments();
+		// Update FSM
+		updateFSM();
+		// Update bounds
+		updateBounds();
+
 	}
 
 	// Set max speed

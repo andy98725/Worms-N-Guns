@@ -12,8 +12,8 @@ public class Game extends JPanel {
 	// State
 	public static boolean running;
 	// Timing variables
-	public static final double frameRate = 60;
-	public static double delta, time;
+	public static final int frameRate = 60;
+	public static double delta;
 	public static int frame;
 	// Graphics variables
 	public static Texturepack textures;
@@ -36,6 +36,10 @@ public class Game extends JPanel {
 
 		// Temp make new board
 		board = new Board();
+	}
+	// Set dimensions
+	public void setDimensions(int wid, int hei) {
+		setBounds(0, 0, wid, hei);
 	}
 
 	// Logic every frame
